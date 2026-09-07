@@ -11,3 +11,8 @@ __pycache__/
 *.pyc
 .DS_Store
 .yarn/install-state.gz
+.superpowers/
+.vscode/
+docs/superpowers/
+AGENTS.md
+.idea/
