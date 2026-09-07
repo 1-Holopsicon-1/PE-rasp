@@ -11,26 +11,6 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Собираем фронтенд через buildYarnPackage (offline-cache зависимостей)
-        frontend = pkgs.buildYarnPackage {
-          pname = "raspisanie-frontend";
-          version = "0.1.0";
-          src = ./.;
-
-          # yarn.lock должен лежать в корне репо
-          yarnBuildScript = "build";
-
-          installPhase = ''
-            runHook preInstall
-            mkdir -p $out
-            cp -r build/* $out/
-            runHook postInstall
-          '';
-
-          # Подставить после первого nix build — он напечатает "got: sha256-..."
-          yarnHash = "";
-        };
-
         # Python-окружение для парсера
         pythonEnv = pkgs.python3.withPackages (p: [ p.pdfplumber ]);
 
@@ -42,23 +22,8 @@
             exec python3 ${./scripts/parse.py} "$@"
           '';
         };
-
-        # Итоговый пакет: статика + парсер в одном output
-        default = pkgs.symlinkJoin {
-          name = "raspisanie";
-          paths = [ frontend ];
-          buildInputs = [ pkgs.makeWrapper ];
-          postBuild = ''
-            mkdir -p $out/bin
-            makeWrapper ${parseScript}/bin/raspisanie-parse $out/bin/raspisanie-parse
-            mkdir -p $out/data
-            cp ${frontend}/data/raspisanie.json $out/data/ 2>/dev/null || true
-          '';
-        };
       in
       {
-        packages.default = default;
-        packages.frontend = frontend;
         packages.parse = parseScript;
 
         devShells.default = pkgs.mkShell {

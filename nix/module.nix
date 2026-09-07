@@ -9,10 +9,16 @@ in
   options.services.raspisanie = {
     enable = mkEnableOption "Расписание физкультуры (статика)";
 
-    package = mkOption {
+    dataDir = mkOption {
+      type = types.path;
+      default = "/opt/PE-rasp/build";
+      description = "Путь к собранной статике (build/)";
+    };
+
+    parseScript = mkOption {
       type = types.package;
-      default = self.packages.${pkgs.system}.default;
-      description = "Nix package с собранной статикой";
+      default = self.packages.${pkgs.system}.parse;
+      description = "Nix package с обёрткой парсера";
     };
 
     port = mkOption {
@@ -28,10 +34,12 @@ in
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       serviceConfig = {
-        WorkingDirectory = "${cfg.package}";
+        WorkingDirectory = "${cfg.dataDir}";
         ExecStart = "${pkgs.python3}/bin/python3 -m http.server ${toString cfg.port}";
         Restart = "on-failure";
       };
     };
+
+    environment.systemPackages = [ cfg.parseScript ];
   };
 }

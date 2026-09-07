@@ -42,34 +42,44 @@ yarn build
 
 ## Деплой через Nix
 
-На NixOS-сервере:
+Фронт собирается вручную (Nix не собирает Node-зависимости — нет хешей,
+нет офлайн-кеша). Nix только раздаёт статику и предоставляет парсер.
 
 ```bash
-# собрать
-nix build .#default
-# результат в ./result — директория со статикой + bin/raspisanie-parse
+# 1. Собрать фронт локально или на сервере:
+yarn install && yarn build    # результат в build/
 
-# обновить расписание: положить PDF в pdf/, затем
-./result/bin/raspisanie-parse
+# 2. Обновить расписание: положить PDF в pdf/, затем
+raspisanie-parse              # парсер доступен через NixOS-модуль
 
-# раздавать (через nginx или python http.server)
-python3 -m http.server 8080 --directory result
+# 3. Раздавать (вручную):
+python3 -m http.server 8080 --directory build
 ```
 
 ### NixOS-модуль
+
+Модуль поднимает systemd-сервис `raspisanie.service` — раздаёт `build/`
+через `python3 -m http.server`. Статика должна лежать в `dataDir`
+(по умолчанию `/opt/PE-rasp/build`).
 
 В `configuration.nix`:
 
 ```nix
 {
-  inputs.raspisanie.url = "github:you/PHe-rsap";  # или путь
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    raspisanie.url = "path:/opt/PE-rasp";
+  };
+
   outputs = { self, nixpkgs, raspisanie, ... }: {
     nixosConfigurations.server = nixpkgs.lib.nixosSystem {
       modules = [
+        ./hardware-configuration.nix
         raspisanie.nixosModules.default
         {
           services.raspisanie.enable = true;
           services.raspisanie.port = 8080;
+          services.raspisanie.dataDir = "/opt/PE-rasp/build";
         }
       ];
     };
@@ -77,7 +87,9 @@ python3 -m http.server 8080 --directory result
 }
 ```
 
-После деплоя: `raspisanie-parse` из PATH сервера для обновления JSON.
+`nixos-rebuild switch` — сервис поднимется. `raspisanie-parse` попадёт в
+PATH. Для обновления расписания: положить PDF в `pdf/`, запустить
+`raspisanie-parse`, перезапустить сервис `systemctl restart raspisanie`.
 
 ## Фильтры
 
