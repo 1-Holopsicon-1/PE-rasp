@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import type { Raspisanie } from '$lib/types';
   import type { Filters } from '$lib/stores/filters';
   import { loadRaspisanie, getSchedule } from '$lib/data';
@@ -26,7 +26,8 @@
   });
 
   // подписка на filters store для реактивности в props
-  filters.subscribe((f) => { currentFilters = f; });
+  const unsubscribeFilters = filters.subscribe((f) => { currentFilters = f; });
+  onDestroy(unsubscribeFilters);
 
   onMount(async () => {
     try {

@@ -50,9 +50,12 @@ export function findNextClass(r: Raspisanie): NextClass | null {
   for (let offset = 1; offset <= 6; offset++) {
     const idx = (todayIdx + offset) % 6;
     const did = dayOrder[idx];
-    const firstSlot = r.slots[0];
-    const has = r.schedule.some((s) => s.day_id === did && s.slot_id === firstSlot.id);
-    if (has) return { dayId: did, slotId: firstSlot.id, isOngoing: false };
+    const firstAvailableSlot = r.slots.find(
+      (s) => r.schedule.some((e) => e.day_id === did && e.slot_id === s.id)
+    );
+    if (firstAvailableSlot) {
+      return { dayId: did, slotId: firstAvailableSlot.id, isOngoing: false };
+    }
   }
   return null;
 }
