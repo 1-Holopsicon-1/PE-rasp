@@ -40,6 +40,45 @@ npm run build
 # результат в build/
 ```
 
+## Деплой через Nix
+
+На NixOS-сервере:
+
+```bash
+# собрать
+nix build .#default
+# результат в ./result — директория со статикой + bin/raspisanie-parse
+
+# обновить расписание: положить PDF в pdf/, затем
+./result/bin/raspisanie-parse
+
+# раздавать (через nginx или python http.server)
+python3 -m http.server 8080 --directory result
+```
+
+### NixOS-модуль
+
+В `configuration.nix`:
+
+```nix
+{
+  inputs.raspisanie.url = "github:you/PHe-rsap";  # или путь
+  outputs = { self, nixpkgs, raspisanie, ... }: {
+    nixosConfigurations.server = nixpkgs.lib.nixosSystem {
+      modules = [
+        raspisanie.nixosModules.default
+        {
+          services.raspisanie.enable = true;
+          services.raspisanie.port = 8080;
+        }
+      ];
+    };
+  };
+}
+```
+
+После деплоя: `raspisanie-parse` из PATH сервера для обновления JSON.
+
 ## Фильтры
 
 - Вид спорта (множественный выбор чипами)
