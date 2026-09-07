@@ -11,21 +11,17 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Собираем фронтенд через buildNpmPackage
-        frontend = pkgs.buildNpmPackage {
+        # Собираем фронтенд через stdenv + yarn
+        frontend = pkgs.stdenv.mkDerivation {
           pname = "raspisanie-frontend";
           version = "0.1.0";
           src = ./.;
-          # lockfile должен быть в репо. Если buildNpmPackage ругается на
-          # хеш — запустить `npm install` локально, закоммитить
-          # package-lock.json, и собрать хеши через `nix build` (он
-          # подскажет правильный npmDepsHash).
-          npmDepsHash = pkgs.lib.fakeHash;  # ЗАМЕНИТЬ после первого прогона
-          dontNpmBuild = false;
-          buildPhase = ''
-            runHook preBuild
-            npm run build
-            runHook postBuild
+          nativeBuildInputs = [ pkgs.yarn pkgs.nodejs ];
+          # yarn.lock должен быть в репо. Если нужен offline-cache хеш —
+          # собрать через `nix build` (он подскажет правильный фиксейшн хеш).
+          yarnBuildPhase = ''
+            yarn install --immutable
+            yarn build
           '';
           installPhase = ''
             runHook preInstall
@@ -66,7 +62,7 @@
         packages.parse = parseScript;
 
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ nodejs python3 python3Packages.pdfplumber ];
+          buildInputs = with pkgs; [ nodejs yarn python3 python3Packages.pdfplumber ];
         };
       }) // {
         nixosModules.default = import ./nix/module.nix { inherit self; };

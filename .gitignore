@@ -10,3 +10,4 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.pyc
 .DS_Store
+.yarn/install-state.gz

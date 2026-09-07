@@ -13,7 +13,7 @@
 ## Установка
 
 ```bash
-npm install
+yarn install
 # Python для парсера через uv (ставится отдельно):
 # curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
@@ -23,20 +23,20 @@ npm install
 1. Положить PDF в `pdf/`.
 2. Запустить парсер:
    ```bash
-   npm run parse
+   yarn parse
    # или явно:
    uv tool run --from pdfplumber python3 scripts/parse.py pdf/file.pdf
    ```
 3. Запустить dev-сервер:
    ```bash
-   npm run dev
+   yarn dev
    ```
 4. Открыть http://localhost:5173
 
 ## Сборка статики
 
 ```bash
-npm run build
+yarn build
 # результат в build/
 ```
 
