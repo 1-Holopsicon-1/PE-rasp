@@ -11,24 +11,24 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
-        # Собираем фронтенд через stdenv + yarn
-        frontend = pkgs.stdenv.mkDerivation {
+        # Собираем фронтенд через buildYarnPackage (offline-cache зависимостей)
+        frontend = pkgs.buildYarnPackage {
           pname = "raspisanie-frontend";
           version = "0.1.0";
           src = ./.;
-          nativeBuildInputs = [ pkgs.yarn pkgs.nodejs ];
-          # yarn.lock должен быть в репо. Если нужен offline-cache хеш —
-          # собрать через `nix build` (он подскажет правильный фиксейшн хеш).
-          yarnBuildPhase = ''
-            yarn install --immutable
-            yarn build
-          '';
+
+          # yarn.lock должен лежать в корне репо
+          yarnBuildScript = "build";
+
           installPhase = ''
             runHook preInstall
             mkdir -p $out
             cp -r build/* $out/
             runHook postInstall
           '';
+
+          # Подставить после первого nix build — он напечатает "got: sha256-..."
+          yarnHash = "";
         };
 
         # Python-окружение для парсера
