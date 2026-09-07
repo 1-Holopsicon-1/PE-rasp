@@ -42,27 +42,21 @@ yarn build
 
 ## Деплой через Nix
 
-Фронт собирается вручную (Nix не собирает Node-зависимости — нет хешей,
-нет офлайн-кеша). Nix только раздаёт статику и предоставляет парсер.
+Nix собирает фронт через `yarn-berry_4` (офлайн-кеш зависимостей) и
+упаковывает парсер. Один `nixos-rebuild switch` — и сервис работает.
 
-```bash
-# 1. Собрать фронт локально или на сервере:
-yarn install && yarn build    # результат в build/
+### Первый прогон: получить хеш офлайн-кеша
 
-# 2. Обновить расписание: положить PDF в pdf/, затем
-raspisanie-parse              # парсер доступен через NixOS-модуль
+В `flake.nix` поле `hash = ""` — первая сборка упадёт с сообщением:
 
-# 3. Раздавать (вручную):
-python3 -m http.server 8080 --directory build
+```
+specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+got:       sha256-<реальный_хеш>=
 ```
 
+Скопировать `got:` → вставить в `hash` в `flake.nix`, закоммитить, пересобрать.
+
 ### NixOS-модуль
-
-Модуль поднимает systemd-сервис `raspisanie.service` — раздаёт `build/`
-через `python3 -m http.server`. Статика должна лежать в `dataDir`
-(по умолчанию `/opt/PE-rasp/build`).
-
-В `configuration.nix`:
 
 ```nix
 {
@@ -79,7 +73,6 @@ python3 -m http.server 8080 --directory build
         {
           services.raspisanie.enable = true;
           services.raspisanie.port = 8080;
-          services.raspisanie.dataDir = "/opt/PE-rasp/build";
         }
       ];
     };
@@ -87,10 +80,15 @@ python3 -m http.server 8080 --directory build
 }
 ```
 
-`nixos-rebuild switch` — сервис поднимется. `raspisanie-parse` попадёт в
-PATH. Для обновления расписания: положить PDF в `pdf/`, запустить
-`raspisanie-parse`, перезапустить сервис `systemctl restart raspisanie`.
+`nixos-rebuild switch` — сервис поднимется, `raspisanie-parse` попадёт в PATH.
 
+### Обновление расписания
+
+```bash
+# положить PDF в pdf/, затем:
+raspisanie-parse                  # перегенерить JSON
+nixos-rebuild switch              # пересобрать (подхватит новый JSON)
+```
 ## Фильтры
 
 - Вид спорта (множественный выбор чипами)
