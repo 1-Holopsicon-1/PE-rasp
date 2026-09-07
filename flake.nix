@@ -20,12 +20,15 @@
 
           offlineCache = yarn-berry.fetchYarnBerryDeps {
             inherit (finalAttrs) src;
-            hash = "";
+            hash = "sha256-TslYZ9VJqGVE87+e0FRYylo29kNhdVDbaimBrz21lNY=";
             missingHashes = ./nix/missing-hashes.json;
           };
 
+          missingHashes = ./nix/missing-hashes.json;
+
           nativeBuildInputs = [
             pkgs.nodejs
+            yarn-berry
             yarn-berry.yarnBerryConfigHook
           ];
 
