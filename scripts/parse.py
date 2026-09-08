@@ -70,6 +70,8 @@ def normalize_location(raw: str) -> dict:
     raw = re.sub(r"\s+", " ", raw).strip()
     # Известные артефакты PDF (перенос слова в ячейке): "Михалков ская" → "Михалковская"
     raw = raw.replace("Михалков ская", "Михалковская")
+    # Опечатка исходного PDF: одна и та же аудитория то "ауд.519а", то "ауд.519"
+    raw = raw.replace("ауд.519а", "ауд.519")
     metro_match = METRO_RE.search(raw)
     metro = ""
     if metro_match:
