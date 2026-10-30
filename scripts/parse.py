@@ -18,6 +18,11 @@ Y-кластерами цветных заливок левой половины
 Текст собирается прямо из page.chars: строки PDF перекрываются по x,
 поэтому extract_words на таких страницах даёт разреженные/перемешанные
 слова; глифы-пробелы служат разделителями слов.
+
+Правки могут вноситься белыми прямоугольниками-аннотациями (Square,
+IC=white) без пересохранения исходника: ячейка визуально «замазана»,
+но текст под ней читается. Блок записи, перекрытый такой аннотацией
+минимум наполовину, исключается из результата.
 """
 
 import json
@@ -173,6 +178,24 @@ def _line_text(line_chars: list) -> str:
     return " ".join(parts)
 
 
+def _cover_boxes(page) -> list[tuple[float, float, float, float]]:
+    """Аннотации-замазки: белые прямоугольники Square поверх ячеек."""
+    boxes: list[tuple[float, float, float, float]] = []
+    for a in page.annots or []:
+        data = a.get("data") or {}
+        sub = data.get("Subtype")
+        sub_name = getattr(sub, "name", None) or (sub if isinstance(sub, str) else "")
+        ic = data.get("IC")
+        is_white = (
+            isinstance(ic, (list, tuple))
+            and len(ic) == 3
+            and all(abs(float(v) - 1.0) < 1e-6 for v in ic)
+        )
+        if sub_name == "Square" and is_white:
+            boxes.append((a["x0"], a["top"], a["x1"], a["bottom"]))
+    return boxes
+
+
 def parse_pdf(path: str) -> dict:
     days = []
     for name, did, short, order in DAY_NAMES:
@@ -217,6 +240,7 @@ def parse_pdf(path: str) -> dict:
                 continue
             cells = table.cells
             all_chars = page.chars
+            covers = _cover_boxes(page)
 
             def text_in(x0, top, x1, bottom) -> str:
                 sel = [
@@ -317,6 +341,20 @@ def parse_pdf(path: str) -> dict:
                         blocks.append([r["top"], r["bottom"]])
 
                 for b_top, b_bottom in blocks:
+                    if any(
+                        min(dx1, c[2]) - max(dx0, c[0]) > 0
+                        and min(b_bottom, c[3]) - max(b_top, c[1]) > 0
+                        and (min(dx1, c[2]) - max(dx0, c[0]))
+                        * (min(b_bottom, c[3]) - max(b_top, c[1]))
+                        >= 0.5 * (dx1 - dx0) * (b_bottom - b_top)
+                        for c in covers
+                    ):
+                        print(
+                            f"  [info] {did}: запись "
+                            f"{clean(text_in(dx0, b_top + 1, mid, b_bottom))[:40]!r} "
+                            "скрыта аннотацией-замазкой — пропущена"
+                        )
+                        continue
                     slot_id = next(
                         (sid for sid, sy, ey in slot_bounds
                          if sy - 2 <= b_top <= ey), None
